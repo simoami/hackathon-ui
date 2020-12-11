@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import PropTypes from 'prop-types';
+import clsx from 'clsx';
 import {
   Box,
   Divider,
@@ -12,7 +12,8 @@ import {
   MenuItem,
   Button,
   Checkbox,
-  Grid
+  Grid,
+  Slider,
 } from '@material-ui/core';
 import Autocomplete, { createFilterOptions } from '@material-ui/lab/Autocomplete';
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank';
@@ -23,6 +24,7 @@ import {
 
 import * as Yup from 'yup';
 import { Field, Formik } from 'formik';
+import { debounce } from 'lodash';
 
 const adSizeFilter = createFilterOptions();
 
@@ -43,7 +45,41 @@ const useStyles = makeStyles((theme) => ({
   fieldDivider: {
     margin: theme.spacing(2, 0)
   },
+  publisherEntry: {
+    display: 'flex',
+    justifyContent: 'space-between',
+  },
+  plan: {
+    ...theme.typography.overline,
+    background: '#eeeeee',
+    borderRadius: 3,
+    padding: '3px 6px',
+    marginLeft: theme.spacing(0.5),
+    float: 'right',
+    lineHeight: '1'
+  },
+  planplatinum: {
+    background: 'linear-gradient( -72deg, #dedeff, #ffffff 16%, #dedeff 21%, #ffffff 24%, #d5d5f3 27%, #dedeff 36%, #ffffff 45%, #ffffff 60%, #dedeff 72%, #ffffff 80%, #dedeff 84%, #a3a3c3 )',
+  },
+  plangold: {
+    background: 'linear-gradient( -72deg, #ffde45, #ffffff 16%, #ffde45 21%, #ffffff 24%, #e8caae 27%, #ffde45 36%, #ffffff 45%, #ffffff 60%, #ffde45 72%, #ffffff 80%, #ffde45 84%, #fdbb7e )',
+  },
+  plansilver: {
+    background: 'linear-gradient( -72deg, #dedede, #ffffff 16%, #dedede 21%, #ffffff 24%, #d0d0d0 27%, #dedede 36%, #ffffff 45%, #ffffff 60%, #dedede 72%, #ffffff 80%, #dedede 84%, #989898 )',
+  },
+
 }));
+
+const viewabilityMarks = [
+  {
+    value: 0,
+    label: '0%',
+  },
+  {
+    value: 100,
+    label: '100%',
+  },
+];
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
 const checkedIcon = <CheckBoxIcon fontSize="small" />;
@@ -58,19 +94,212 @@ const validationSchema = Yup.object().shape({
 const NavBar = ({ onMobileClose, openMobile }) => {
   const classes = useStyles();
   const location = useLocation();
+  const [selectedPublisher, setSelectedPublisher] = useState('cbsi');
+  const planOptions = {
+    platinum: {
+      features: {
+        viewability: 'full', // slider
+        domain: true,
+        country: true,
+        product: true,
+        device: true,
+        adSize: true,
+        userMatch: true,
+        dsp: true,
+        directInventory: true,
+      }
+    },
+    gold: {
+      features: {
+        viewability: 'on', // on / off
+        domain: true,
+        country: true,
+        product: true,
+        device: true,
+        adSize: true,
+        userMatch: true,
+        dsp: true,
+        directInventory: false,
+      }
 
+    },
+    silver: {
+      features: {
+        viewability: 'off', // disabled
+        domain: true,
+        country: true,
+        product: true,
+        device: true,
+        adSize: true,
+        userMatch: false,
+        dsp: false,
+        directInventory: false,
+      }
+    }
+  };
   const publisherOptions = [
-    { id: 'cbsi', name: 'CBSi (Platinum)' },
-    { id: 'nypost', name: 'NY Post (Gold)' },
-    { id: 'sharethrough', name: 'ShareThrough (Silver)' },
+    {
+      id: 'cbsi',
+      name: 'CBSi',
+      plan: 'platinum',
+      features: planOptions.platinum.features,
+    },
+    {
+      id: 'nypost',
+      name: 'NY Post',
+      plan: 'gold',
+      features: planOptions.gold.features,
+    },
+    {
+      id: 'sharethrough',
+      name: 'ShareThrough',
+      plan: 'silver',
+      features: planOptions.silver.features,
+    },
   ];
 
   const presetOptions = [
-    { id: 'default', name: 'Default' }
+    {
+      id: 'default',
+      name: 'Default',
+      publisherId: 'cbsi',
+      values: {
+        domain: 'cbsi.com',
+        adSize: ['728x90', '768x90'],
+        device: 'desktop',
+        dsp: 'bidswitch',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
+    {
+      id: 'lite',
+      name: 'Lite',
+      publisherId: 'cbsi',
+      values: {
+        domain: 'cbsi.com',
+        adSize: ['728x90'],
+        device: 'desktop',
+        dsp: 'rubicon',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
+    {
+      id: 'aggressive',
+      name: 'Aggressive',
+      publisherId: 'cbsi',
+      values: {
+        domain: 'cbsi.com',
+        adSize: ['728x90'],
+        device: 'mobile',
+        dsp: 'bidswitch',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
+    {
+      id: 'default',
+      name: 'Default',
+      publisherId: 'nypost',
+      values: {
+        domain: 'nypost.com',
+        adSize: ['728x90'],
+        device: 'tablet',
+        dsp: 'rubicon',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
+    {
+      id: 'lite',
+      name: 'Lite',
+      publisherId: 'nypost',
+      values: {
+        domain: 'nypost.com',
+        adSize: ['728x90'],
+        device: 'desktop',
+        dsp: 'rubicon',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
+    {
+      id: 'aggressive',
+      name: 'Aggressive',
+      publisherId: 'nypost',
+      values: {
+        domain: 'nypost.com',
+        adSize: ['728x90'],
+        device: 'mobile',
+        dsp: 'rubicon',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
+    {
+      id: 'default',
+      name: 'Default',
+      publisherId: 'sharethrough',
+      values: {
+        domain: 'sharethrough.com',
+        adSize: ['768x90'],
+        device: 'tablet',
+        dsp: 'bidswitch',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
+    {
+      id: 'lite',
+      name: 'Lite',
+      publisherId: 'sharethrough',
+      values: {
+        domain: 'sharethrough.com',
+        adSize: ['728x90'],
+        device: 'mobile',
+        dsp: 'bidswitch',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
+    {
+      id: 'aggressive',
+      name: 'Aggressive',
+      publisherId: 'sharethrough',
+      values: {
+        domain: 'sharethrough.com',
+        adSize: ['728x90'],
+        device: 'tablet',
+        dsp: 'bidswitch',
+        country: 'us',
+        userMatch: true,
+        viewability: 0,
+        directInventory: true,
+      }
+    },
   ];
 
   const domainOptions = [
     { domain: 'cbsi.com', publisherId: 'cbsi' },
+    { domain: 'tvguide.com', publisherId: 'cbsi' },
+    { domain: '247sports.com', publisherId: 'cbsi' },
     { domain: 'nypost.com', publisherId: 'nypost' },
     { domain: 'sharethrough.com', publisherId: 'sharethrough' },
   ];
@@ -100,9 +329,9 @@ const NavBar = ({ onMobileClose, openMobile }) => {
   ];
 
   const dspOptions = [
-    { id: 'dsp1', name: 'DSP 1' },
-    { id: 'dsp2', name: 'DSP 2' },
-    { id: 'dsp3', name: 'DSP 3' },
+    { id: 'bidswitch', name: 'BidSwitch' },
+    { id: 'rubicon', name: 'Rubicon' },
+    { id: 'openx', name: 'Open X' },
   ];
 
   const countryOptions = [
@@ -125,17 +354,19 @@ const NavBar = ({ onMobileClose, openMobile }) => {
     { value: true, name: 'Direct Only' },
   ];
 
+  const selectedDefaults = presetOptions.find((p) => p.publisherId === selectedPublisher && p.id === 'default')?.values;
   const initialValues = {
-    publisher: 'cbsi',
+    publisher: selectedPublisher,
     preset: 'default',
-    domain: domainOptions.filter((option) => ['cbsi.com'].includes(option.domain)),
-    adSize: adSizeOptions.filter((option) => ['728x90'].includes(option)),
-    device: deviceOptions.filter((option) => ['desktop'].includes(option.id)),
-    dsp: dspOptions.filter((option) => ['dsp1'].includes(option.id)),
-    country: 'us',
-    userMatch: true,
-    viewability: 0, // between 0 and 1
-    directInventory: true,
+    // domain: selectedDefaults.domain,
+    domain: domainOptions.filter((option) => [selectedDefaults.domain].includes(option.domain)),
+    adSize: adSizeOptions.filter((option) => selectedDefaults?.adSize?.includes(option)),
+    device: deviceOptions.filter((option) => [selectedDefaults.device].includes(option.id)),
+    dsp: dspOptions.filter((option) => [selectedDefaults.dsp].includes(option.id)),
+    country: selectedDefaults.country,
+    userMatch: selectedDefaults.userMatch,
+    viewability: selectedDefaults.viewability, // between 0 and 1
+    directInventory: selectedDefaults.directInventory,
   };
 
   const handleSubmit = useCallback(
@@ -155,6 +386,7 @@ const NavBar = ({ onMobileClose, openMobile }) => {
 
   const content = (
     <Formik
+      enableReinitialize
       initialValues={initialValues}
       validationSchema={validationSchema}
       onSubmit={handleSubmit}
@@ -180,7 +412,7 @@ const NavBar = ({ onMobileClose, openMobile }) => {
               p={2}
             >
               <Field name="publisher">
-                {({ field, meta }) => (
+                {({ field, form, meta }) => (
                   <TextField
                     variant="outlined"
                     size="small"
@@ -190,9 +422,16 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                     {...field}
                     helperText={meta.touched ? meta.error : null}
                     error={meta.touched && !!meta.error}
+                    onChange={(e) => {
+                      setSelectedPublisher(e.target.value);
+                      form.setFieldValue(field.name, e.target.value);
+                    }}
                   >
                     {publisherOptions.map((option) => (
-                      <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
+                      <MenuItem key={option.id} className={classes.publisherEntry} value={option.id}>
+                        <span>{option.name}</span>
+                        <span className={clsx(classes.plan, classes[`plan${option.plan}`])}>{option.plan}</span>
+                      </MenuItem>
                     ))}
                   </TextField>
                 )}
@@ -219,7 +458,9 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                     helperText={meta.touched ? meta.error : null}
                     error={meta.touched && !!meta.error}
                   >
-                    {presetOptions.map((option) => (
+                    {presetOptions.filter(
+                      (option) => option.publisherId === values.publisher
+                    ).map((option) => (
                       <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
                     ))}
                   </TextField>
@@ -272,8 +513,8 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                       )}
                       {...field}
                       onChange={(event, newValue) => form.setFieldValue(field.name, newValue)}
+                      disabled={!publisherOptions.find((p) => p.id === values.publisher)?.features.domain}
                     />
-
                   )}
                 </Field>
               </Box>
@@ -329,6 +570,7 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                         }
                         return filtered;
                       }}
+                      disabled={!publisherOptions.find((p) => p.id === values.publisher)?.features.adSize}
                     />
 
                   )}
@@ -370,7 +612,30 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                       )}
                       {...field}
                       onChange={(event, newValue) => form.setFieldValue(field.name, newValue)}
+                      disabled={!publisherOptions.find((p) => p.id === values.publisher)?.features.device}
                     />
+                  )}
+                </Field>
+              </Box>
+
+              <Box py={2}>
+                <Field name="country">
+                  {({ field, meta }) => (
+                    <TextField
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      select
+                      label="Country"
+                      {...field}
+                      helperText={meta.touched ? meta.error : null}
+                      error={meta.touched && !!meta.error}
+                      disabled={!publisherOptions.find((p) => p.id === values.publisher)?.features.country}
+                    >
+                      {countryOptions.map((option) => (
+                        <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
+                      ))}
+                    </TextField>
                   )}
                 </Field>
               </Box>
@@ -409,28 +674,8 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                       )}
                       {...field}
                       onChange={(event, newValue) => form.setFieldValue(field.name, newValue)}
+                      disabled={!publisherOptions.find((p) => p.id === values.publisher)?.features.dsp}
                     />
-                  )}
-                </Field>
-              </Box>
-
-              <Box py={2}>
-                <Field name="country">
-                  {({ field, meta }) => (
-                    <TextField
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      select
-                      label="Country"
-                      {...field}
-                      helperText={meta.touched ? meta.error : null}
-                      error={meta.touched && !!meta.error}
-                    >
-                      {countryOptions.map((option) => (
-                        <MenuItem key={option.id} value={option.id}>{option.name}</MenuItem>
-                      ))}
-                    </TextField>
                   )}
                 </Field>
               </Box>
@@ -447,6 +692,7 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                       {...field}
                       helperText={meta.touched ? meta.error : null}
                       error={meta.touched && !!meta.error}
+                      disabled={!publisherOptions.find((p) => p.id === values.publisher)?.features.userMatch}
                     >
                       {userMatchOptions.map((option) => (
                         <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
@@ -456,26 +702,53 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                 </Field>
               </Box>
 
-              <Box py={2}>
-                <Field name="viewability">
-                  {({ field, meta }) => (
-                    <TextField
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      select
-                      label="Viewability"
-                      {...field}
-                      helperText={meta.touched ? meta.error : null}
-                      error={meta.touched && !!meta.error}
-                    >
-                      {viewabilityOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                </Field>
-              </Box>
+              {publisherOptions.find((p) => p.id === values.publisher)?.features.viewability === 'full'
+                ? (
+                  <Box py={1} px={2}>
+                    <Typography variant="caption" id="discrete-slider-custom" gutterBottom>
+                      Viewability
+                    </Typography>
+                    <Field name="viewability">
+                      {({ field, form, meta }) => (
+                        <Slider
+                          value={field.value}
+                          aria-labelledby="discrete-slider-custom"
+                          step={5}
+                          valueLabelDisplay="auto"
+                          marks={viewabilityMarks}
+                          onChange={debounce((e, value) => form.setFieldValue(field.name, value), 10)}
+                        />
+                      )}
+                    </Field>
+                  </Box>
+                  )
+                : null}
+
+              {publisherOptions.find((p) => p.id === values.publisher)?.features.viewability === 'on'
+                ? (
+                  <Box py={2}>
+                    <Field name="viewability">
+                      {({ field, meta }) => (
+                        <TextField
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          select
+                          label="Viewability"
+                          {...field}
+                          helperText={meta.touched ? meta.error : null}
+                          error={meta.touched && !!meta.error}
+                          disabled={!publisherOptions.find((p) => p.id === values.publisher)?.features.viewability === 'on'}
+                        >
+                          {viewabilityOptions.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                          ))}
+                        </TextField>
+                      )}
+                    </Field>
+                  </Box>
+                  )
+                : null}
 
               <Box py={2}>
                 <Field name="directInventory">
@@ -489,6 +762,7 @@ const NavBar = ({ onMobileClose, openMobile }) => {
                       {...field}
                       helperText={meta.touched ? meta.error : null}
                       error={meta.touched && !!meta.error}
+                      disabled={!publisherOptions.find((p) => p.id === values.publisher)?.features.directInventory}
                     >
                       {directInventoryOptions.map((option) => (
                         <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
@@ -568,11 +842,6 @@ const NavBar = ({ onMobileClose, openMobile }) => {
       </Hidden>
     </>
   );
-};
-
-NavBar.propTypes = {
-  onMobileClose: PropTypes.func,
-  openMobile: PropTypes.bool
 };
 
 NavBar.defaultProps = {
