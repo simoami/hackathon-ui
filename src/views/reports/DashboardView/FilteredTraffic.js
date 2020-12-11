@@ -1,6 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { usePrevious } from 'react-use';
 import {
   Avatar,
   Box,
@@ -13,6 +14,8 @@ import {
 } from '@material-ui/core';
 import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward';
 import MoneyIcon from '@material-ui/icons/Money';
+import numeral from 'numeral';
+import Counter from 'src/components/Counter/Counter';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -32,8 +35,9 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-const FilteredTraffic = ({ className, ...rest }) => {
+const FilteredTraffic = ({ className, value, ...rest }) => {
   const classes = useStyles();
+  const previous = usePrevious(value);
 
   return (
     <Card
@@ -54,12 +58,16 @@ const FilteredTraffic = ({ className, ...rest }) => {
             >
               FILTERED TRAFFIC
             </Typography>
-            <Typography
-              color="textPrimary"
-              variant="h3"
-            >
-              1,600
-            </Typography>
+            <Counter start={previous} end={value} duration={1.5}>
+              {({ value }) => (
+                <Typography
+                  color="textPrimary"
+                  variant="h3"
+                >
+                  {numeral(value).format('(0,0)')}
+                </Typography>
+              )}
+            </Counter>
           </Grid>
           <Grid item>
             <Avatar className={classes.avatar}>
@@ -92,7 +100,8 @@ const FilteredTraffic = ({ className, ...rest }) => {
 };
 
 FilteredTraffic.propTypes = {
-  className: PropTypes.string
+  className: PropTypes.string,
+  value: PropTypes.number,
 };
 
 export default FilteredTraffic;

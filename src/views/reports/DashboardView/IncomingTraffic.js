@@ -1,6 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { usePrevious } from 'react-use';
 import {
   Avatar,
   Box,
@@ -11,8 +12,10 @@ import {
   colors,
   makeStyles
 } from '@material-ui/core';
+import numeral from 'numeral';
 import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
 import InsertChartIcon from '@material-ui/icons/InsertChartOutlined';
+import Counter from 'src/components/Counter/Counter';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -32,9 +35,9 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-const IncominTraffic = ({ className, ...rest }) => {
+const IncominTraffic = ({ className, value, ...rest }) => {
   const classes = useStyles();
-
+  const previous = usePrevious(value);
   return (
     <Card
       className={clsx(classes.root, className)}
@@ -58,7 +61,16 @@ const IncominTraffic = ({ className, ...rest }) => {
               color="textPrimary"
               variant="h3"
             >
-              $24,000
+              <Counter start={previous} end={value} duration={1.5}>
+                {({ value }) => (
+                  <Typography
+                    color="textPrimary"
+                    variant="h3"
+                  >
+                    {numeral(value).format('(0,0)')}
+                  </Typography>
+                )}
+              </Counter>
             </Typography>
           </Grid>
           <Grid item>
@@ -92,7 +104,8 @@ const IncominTraffic = ({ className, ...rest }) => {
 };
 
 IncominTraffic.propTypes = {
-  className: PropTypes.string
+  className: PropTypes.string,
+  value: PropTypes.number,
 };
 
 export default IncominTraffic;
