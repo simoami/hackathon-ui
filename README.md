@@ -38,16 +38,8 @@ material-react-dashboard
 	├── layouts
 	├── theme
 	├── views
-	│	├── Account
-	│	├── Dashboard
-	│	├── Icons
-	│	├── NotFound
-	│	├── ProductList
-	│	├── Settings
-	│	├── SignIn
-	│	├── SignUp
-	│	├── Typography
-	│	└── UserList
+	│	├── Dashboard (This is where the UI elements for the hackthon live)
+	│	└── NotFound
 	├── App.jsx
 	├── index.jsx
 	└── Routes.jsx
